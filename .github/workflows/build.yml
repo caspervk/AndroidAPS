@@ -1,0 +1,59 @@
+# https://github.com/settings/billing/summary
+name: Build and Release APK
+
+# https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows
+on:
+  push:
+    tags:
+      - "*"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out repository under $GITHUB_WORKSPACE
+      # https://github.com/actions/checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # https://github.com/actions/setup-java
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          # https://github.com/actions/setup-java?tab=readme-ov-file#supported-version-syntax
+          # https://adoptium.net/support/
+          # https://docs.gradle.org/current/userguide/compatibility.html
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+
+      # https://developer.android.com/build/building-cmdline
+      - name: Build APK
+        run: ./gradlew assembleRelease --no-daemon
+
+      # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/customizing-github-hosted-runners
+      - name: Install android tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install zipalign apksigner
+
+      # https://developer.android.com/build/building-cmdline#sign_cmdline
+      # https://github.com/caspervk/AndroidAPS-builds/settings/secrets/actions
+      - name: Sign APK
+        run: |
+          cd app/build/outputs/apk/full/release/
+          echo "$APK_RELEASE_KEY_BASE64" | base64 -d > release-key.jks
+          zipalign -v -p 4 app-full-release-unsigned.apk app-full-release-unsigned-aligned.apk
+          apksigner sign --ks release-key.jks --ks-pass pass:"$APK_RELEASE_KEY_PASSWORD" --out "aaps-$REF_NAME.apk" app-full-release-unsigned-aligned.apk
+        env:
+          APK_RELEASE_KEY_BASE64: ${{ secrets.APK_RELEASE_KEY_BASE64 }}
+          APK_RELEASE_KEY_PASSWORD: ${{ secrets.APK_RELEASE_KEY_PASSWORD }}
+          REF_NAME: ${{ github.ref_name }}
+
+      # https://github.com/softprops/action-gh-release
+      - name: Release APK
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/full/release/aaps-${{ github.ref_name }}.apk

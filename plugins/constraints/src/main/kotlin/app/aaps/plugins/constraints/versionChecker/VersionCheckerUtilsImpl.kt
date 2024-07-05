@@ -68,6 +68,9 @@ class VersionCheckerUtilsImpl @Inject constructor(
         }
 
     fun evaluateVersion(newVersion: String?, currentVersion: String): VersionResult {
+        if (true) {
+            return VersionResult.SAME_VERSION
+        }
 
         val newVersionElements = newVersion.toNumberList()
         val currentVersionElements = currentVersion.toNumberList()

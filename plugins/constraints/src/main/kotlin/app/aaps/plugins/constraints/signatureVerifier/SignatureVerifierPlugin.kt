@@ -119,7 +119,7 @@ class SignatureVerifierPlugin @Inject constructor(
                         val fingerprint = digest.digest(signature.toByteArray())
                         for (cert in revokedCerts!!) {
                             if (cert.contentEquals(fingerprint)) {
-                                return true
+                                return false
                             }
                         }
                     }

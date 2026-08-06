@@ -62,6 +62,8 @@ jobs:
   build:
     name: Build AAPS
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # allow writing github release
     steps:
       - name: Decode Secrets Keystore Set and Oauth2 to Env
         run: |
@@ -95,6 +97,7 @@ jobs:
           echo "GDRIVE_OAUTH2=${{ secrets.GDRIVE_OAUTH2 }}" >> $GITHUB_ENV
 
       - name: Check Secrets
+        if: false  # don't
         run: |
           echo "🔍 Checking required secrets..."
           MISSING=0
@@ -156,6 +159,7 @@ jobs:
           echo "✅ Keystore and credentials validated."
 
       - name: Decode GDrive OAuth2 secrets
+        if: false  # don't
         run: |
           echo "🔐 Decoding GDRIVE_OAUTH2..."
           DECODED=$(echo "${{ secrets.GDRIVE_OAUTH2 }}" | base64 -d)
@@ -172,6 +176,7 @@ jobs:
           echo "✅ GDRIVE_CLIENT_ID and GDRIVE_REFRESH_TOKEN extracted from GDRIVE_OAUTH2"
 
       - name: Retrieving Google Drive access token
+        if: false  # don't
         run: |
           echo "🔐 Getting Google OAuth2 access token..."
           TOKEN_RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
@@ -194,6 +199,7 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch selected tag from upstream
+        if: false  # don't
         run: |
           git remote add upstream https://github.com/nightscout/AndroidAPS.git || true
           git fetch upstream refs/tags/${{ github.event.inputs.tagName }}:refs/tags/${{ github.event.inputs.tagName }}
@@ -215,6 +221,7 @@ jobs:
           echo "ℹ️ Tag $TAG → JDK $JAVA_VERSION (from jdk-map.json)"
 
       - name: Switch to selected tag
+        if: false  # don't
         run: |
           git checkout refs/tags/${{ github.event.inputs.tagName }}
           echo "✅ Checked out tag ${{ github.event.inputs.tagName }}"
@@ -273,6 +280,7 @@ jobs:
           mv wear/build/outputs/apk/${{ env.VARIANT_FLAVOR }}/${{ env.VARIANT_TYPE }}/*.apk aaps-wear-${{ env.VERSION }}${{ env.VERSION_SUFFIX }}.apk
 
       - name: Upload APKs to Google Drive
+        if: false  # don't
         run: |
           set -e
           echo "🔐 Start uploading APKs to Google Drive..."
@@ -356,6 +364,12 @@ jobs:
           upload_to_gdrive "aaps-wear-${VERSION}${VERSION_SUFFIX}.apk" "aaps-wear-${VERSION}${VERSION_SUFFIX}.apk"
 
           echo "🎉 APKs successfully uploaded to Google Drive!"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${VERSION}${VERSION_SUFFIX}-${{ github.run_number }}" "aaps-${VERSION}${VERSION_SUFFIX}.apk" --notes "no notes"
 
   # Configuration: Threshold-based cleanup
   # Clean up only occurs when total runs exceed: keep_runs + keep_threshold (e.g., 20 + 5 = 25)
